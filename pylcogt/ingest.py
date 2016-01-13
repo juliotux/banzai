@@ -141,8 +141,10 @@ class Ingest(Stage):
 #    @metric_timer('ingest')
     def do_stage(self, raw_image_list):
         for image in raw_image_list:
-            ingest_single_image('Ingest', self.pipeline_context.processed_path, self.image_suffix_number, image)
-
+            try:
+                ingest_single_image('Ingest', self.pipeline_context.processed_path, self.image_suffix_number, image)
+            except:
+                pass
         return
 
     def select_input_images(self, telescope, epoch):
