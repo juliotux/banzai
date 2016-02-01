@@ -12,7 +12,7 @@ class Astrometry(Stage):
           '--scale-units arcsecperpix --scale-low {scale_low} --scale-high {scale_high} ' \
           '--no-plots -N {output_name}   --use-sextractor ' \
           '--code-tolerance 0.003 --pixel-error 20 -d 1-200 ' \
-          '--solved none --match none --rdls none --wcs none --corr none --overwrite {image_name}'
+          '--overwrite {image_name}'
 
     def __init__(self, pipeline_context):
 

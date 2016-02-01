@@ -45,8 +45,8 @@ class Trim(object):
                                                     self.previous_stage_done, None)
 
             for image_set in image_sets:
-                tags = logs.image_config_to_tags(image_set[0], telescope, epoch)
-                logger.info(self.log_message, extra=tags)
+                #tags = logs.image_config_to_tags(image_set[0], telescope, epoch)
+                #logger.info(self.log_message, extra=tags)
                 self.do_stage(image_set)
 
         return

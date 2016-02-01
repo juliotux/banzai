@@ -282,7 +282,7 @@ def select_input_images(telescope, epoch, initial_query, previous_stage_done, gr
         input_image_list.append(image_list)
 
         if len(image_list) == 0:
-            config_list.append([])
+            config_list.append(None)
         else:
             config_list.append(image_list[0])
     db_session.close()

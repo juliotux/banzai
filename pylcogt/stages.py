@@ -60,17 +60,18 @@ class Stage(object):
 
             for image_set, image_config in zip(image_sets, image_configs):
 
-                tags = logs.image_config_to_tags(image_config, telescope, epoch, self.group_by)
-                self.logger.info('Running {0}'.format(self.stage_name), tags)
+                #tags = logs.image_config_to_tags(image_config, telescope, epoch, self.group_by)
+                #self.logger.info('Running {0}'.format(self.stage_name), tags)
+                if len(image_set) > 0:
+                    stage_args = [image_set]
 
-                stage_args = [image_set]
-
-                master_cal_file = self.get_calibration_image(epoch, telescope, image_config)
-                if master_cal_file is not None:
-                    stage_args.append(master_cal_file)
-
-                self.do_stage(*stage_args)
-
+                    master_cal_file = self.get_calibration_image(epoch, telescope, image_config)
+                    if master_cal_file is not None:
+                        stage_args.append(master_cal_file)
+                    try:
+                        self.do_stage(*stage_args)
+                    except:
+                        pass
     @abc.abstractmethod
     def do_stage(self, input_images):
         pass
@@ -88,15 +89,19 @@ class MakeCalibrationImage(Stage):
                                                    previous_stage_done=previous_stage_done)
 
     def get_calibration_image(self, epoch, telescope, image_config):
-        output_directory = os.path.join(self.pipeline_context.processed_path, telescope.site, telescope.instrument, epoch)
-        cal_file = '{filepath}/{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
-        if dbs.Image.filter_name in self.group_by:
-            filter_str = '_{filter}'.format(filter=image_config.filter_name)
+        if image_config is None:
+            cal_file = ''
         else:
-            filter_str = ''
+            output_directory = os.path.join(self.pipeline_context.processed_path, telescope.site, telescope.instrument, epoch)
+            cal_file = '{filepath}/{cal_type}_{instrument}_{epoch}_bin{bin}{filter}.fits'
+            if dbs.Image.filter_name in self.group_by:
+                filter_str = '_{filter}'.format(filter=image_config.filter_name)
+            else:
+                filter_str = ''
 
-        cal_file = cal_file.format(filepath=output_directory, instrument=telescope.instrument, epoch=epoch,
-                                   bin=image_config.ccdsum.replace(' ', 'x'), cal_type=self.cal_type, filter=filter_str)
+
+            cal_file = cal_file.format(filepath=output_directory, instrument=telescope.instrument, epoch=epoch,
+                                       bin=image_config.ccdsum.replace(' ', 'x'), cal_type=self.cal_type, filter=filter_str)
         return cal_file
     def save_calibration_info(self, cal_type, output_file, image_config):
         # Store the information into the calibration table
@@ -141,24 +146,30 @@ class ApplyCalibration(Stage):
 
 
     def get_calibration_image(self, epoch, telescope, image_config):
-        calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
-        calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
+        if image_config is None:
+            calibration_file = ''
+        else:
+            calibration_criteria = dbs.CalibrationImage.type == self.cal_type.upper()
+            calibration_criteria &= dbs.CalibrationImage.telescope_id == telescope.id
 
-        for criteria in self.group_by:
-            group_by_field = vars(criteria)['key']
-            calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config,
-                                                                                             group_by_field)
+            for criteria in self.group_by:
+                group_by_field = vars(criteria)['key']
+                calibration_criteria &= getattr(dbs.CalibrationImage, group_by_field) == getattr(image_config,
+                                                                                                 group_by_field)
 
-        db_session = dbs.get_session()
+            db_session = dbs.get_session()
 
-        calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
-        epoch_datetime = date_utils.epoch_string_to_date(epoch)
+            calibration_query = db_session.query(dbs.CalibrationImage).filter(calibration_criteria)
+            epoch_datetime = date_utils.epoch_string_to_date(epoch)
 
-        find_closest = func.DATEDIFF(epoch_datetime, dbs.CalibrationImage.dayobs)
-        find_closest = func.ABS(find_closest)
+            find_closest = func.DATEDIFF(epoch_datetime, dbs.CalibrationImage.dayobs)
+            find_closest = func.ABS(find_closest)
 
-        calibration_query = calibration_query.order_by(find_closest.asc())
-        calibration_image = calibration_query.first()
-        calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
+            calibration_query = calibration_query.order_by(find_closest.asc())
+            calibration_image = calibration_query.first()
+            if calibration_image is None:
+                calibration_file = ''
+            else:
+                calibration_file = os.path.join(calibration_image.filepath, calibration_image.filename)
 
         return calibration_file
