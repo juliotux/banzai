@@ -1,3 +1,7 @@
+0.9.4 (2018-05-11)
+------------------
+- Fixed header checker
+
 0.9.3 (2018-05-10)
 ------------------
 - Hotfix (temporary until pattern noise and calibration comparer parameters are
